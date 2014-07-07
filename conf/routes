@@ -3,6 +3,7 @@
 # ~~~~
 
 # Home page
-GET     /                           controllers.Products.list()
-GET     /scan                       controllers.Products.index()
+GET     /               controllers.Products.index()
+POST    /addProduct     controllers.Products.addProduct()
+GET     /products       controllers.Products.getProduct(productid: models.hub_products)
 

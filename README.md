@@ -1,4 +1,6 @@
 amazonWithPlay
 ==============
 
-trying to build what amazon would be using play framework
+Sample application using AWS dynamodb as the persistent storage and the play framework as the RESTful middleware.
+
+

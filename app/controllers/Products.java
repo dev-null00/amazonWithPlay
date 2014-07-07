@@ -3,26 +3,50 @@ package controllers;
 /**
  * Created by perf on 7/3/14.
  */
-import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import com.google.gson.Gson;
 import models.hub_products;
 import play.data.Form;
 import play.mvc.Controller;
 import play.mvc.Result;
 import java.util.List;
-import java.util.Map;
+import utils.dynamodbClientObject;
+import org.joda.time.DateTime;
 
 public class Products extends Controller{
 
     private static final Form<hub_products> productForm = Form.form(hub_products.class);
 
-    public static Result list() {
-        List<hub_products> hubproductses = hub_products.findAll();
-        return ok(hubproductses.get(0).toString());
+    public static Result index() {
+        List<hub_products> rows = hub_products.findAll();
+        String json = new Gson().toJson(rows);
+        return ok(json);
     }
 
-    public static Result index() {
-        List<Map<String, AttributeValue>> rows = hub_products.scanTheTable();
+    public static Result addProduct() {
+        dynamodbClientObject DBmapper = new dynamodbClientObject();
+        Form<hub_products> boundForm = productForm.bindFromRequest();
+        if(boundForm.hasErrors()) {
+            flash("error", "Please correct the form below.");
+            return badRequest(boundForm.errorsAsJson());
+        }
+        hub_products productToAdd = boundForm.get();
+        DateTime dt = DateTime.now();
+        productToAdd.setLoadDate(dt.toString());
+        DBmapper.mapper.save(productToAdd);
+        return ok();
+    }
 
-        return ok(rows.toString());
+    public static Result getProduct(hub_products product) {
+        if (product == null)
+        {
+            return badRequest("no such product");
+        }
+        Form<hub_products> filledForm = productForm.fill(product);
+        if(filledForm.hasErrors()) {
+            flash("error", "Please correct the form below.");
+            return badRequest("error");
+        }
+        String json = new Gson().toJson(filledForm.value());
+        return ok(json);
     }
 }

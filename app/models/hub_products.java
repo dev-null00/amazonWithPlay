@@ -1,25 +1,19 @@
 package models;
 
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBAsyncClient;
-import com.amazonaws.services.dynamodbv2.datamodeling.*;
-import com.amazonaws.services.dynamodbv2.model.AttributeValue;
-import com.amazonaws.services.dynamodbv2.model.ScanRequest;
-import com.amazonaws.services.dynamodbv2.model.ScanResult;
-import play.Play;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBAttribute;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
 import play.data.validation.Constraints;
-
+import play.libs.F;
+import play.mvc.PathBindable;
+import play.mvc.QueryStringBindable;
+import utils.dynamodbClientObject;
 import java.util.List;
 import java.util.Map;
 
 @DynamoDBTable(tableName="hub_products")
-public class hub_products {
-    public static final String AWS_SECRET_KEY = Play.application().configuration().getString("aws.secret.key");
-    public static final String AWS_ACCESS_KEY = Play.application().configuration().getString("aws.access.key");
-    public static final AWSCredentials awsCredentials = new BasicAWSCredentials(AWS_ACCESS_KEY, AWS_SECRET_KEY);
-
-
+public class hub_products implements PathBindable<hub_products>,QueryStringBindable<hub_products> {
     @Constraints.Required
     private long productid;
     @Constraints.Required
@@ -38,32 +32,35 @@ public class hub_products {
     public String getRecordSource() { return recordSource; }
     public void setRecordSource(String recordSource) { this.recordSource = recordSource; }
 
-    public static List<hub_products> findAll() {
-        AmazonDynamoDBAsyncClient client = new AmazonDynamoDBAsyncClient(awsCredentials);
-        DynamoDBMapper mapper = new DynamoDBMapper(client);
-        hub_products hashKeyValues = new hub_products();
-        long productID=1;
-        hashKeyValues.setProductid(productID);
-        DynamoDBQueryExpression<hub_products> queryExpression = new DynamoDBQueryExpression<hub_products>().withHashKeyValues(hashKeyValues);
-        queryExpression.setHashKeyValues(hashKeyValues);
-        List<hub_products> itemList = mapper.query(hub_products.class, queryExpression);
-        return itemList;
+    public static List<hub_products> findAll(){
+        DynamoDBScanExpression scanExpression = new DynamoDBScanExpression();
+        dynamodbClientObject dbClient = new dynamodbClientObject();
+        return dbClient.mapper.scan(hub_products.class,scanExpression);
     }
 
-    public static List<Map<String, AttributeValue>> scanTheTable(){
-        AmazonDynamoDBAsyncClient client = new AmazonDynamoDBAsyncClient(awsCredentials);
-        ScanResult result =null;
-        ScanRequest req = new ScanRequest();
-        req.setTableName("hub_products");
+    public static hub_products findByID(long productid){
+        dynamodbClientObject dbClient = new dynamodbClientObject();
+        return dbClient.mapper.load(hub_products.class, productid);
+    }
 
-        if(result != null){
-            req.setExclusiveStartKey(result.getLastEvaluatedKey());
-        }
+    @Override
+    public hub_products bind(String key, String value) {
+        return findByID(Long.parseLong(value));
+    }
 
-        result = client.scan(req);
+    @Override
+    public F.Option<hub_products> bind(String key, Map<String, String[]> data) {
+        return F.Option.Some(findByID(Long.parseLong(data.get("productid")[0])));
+    }
 
-        List<Map<String, AttributeValue>> rows = result.getItems();
-        return rows;
+    @Override
+    public String unbind(String s) {
+        return Long.toString(this.productid);
+    }
+
+    @Override
+    public String javascriptUnbind() {
+        return Long.toString(this.productid);
     }
 }
 
